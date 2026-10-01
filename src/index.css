@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* One-colour palette (warm ink on paper), modelled on tribe.ai */
+@theme {
+  --color-paper: #fafaf8;
+  --color-card: #ffffff;
+  --color-sand: #efebe5;
+  --color-stone: #c7bdb2;
+  --color-taupe: #8a8276;
+  --color-umber: #5e574e;
+  --color-ink: #06141b;
+  --color-ink-2: #1c2a31;
+  --color-klar: #e8322b; /* brand accent: the logo's full stop */
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, serif;
+
+  --ease-snap: cubic-bezier(0.625, 0.05, 0, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-marquee: marquee 45s linear infinite;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
+
+@keyframes rise {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+@layer base {
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  body {
+    @apply bg-paper font-sans text-[17px] text-ink antialiased;
+    overflow-x: clip;
+  }
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-taupe);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply mx-auto w-full max-w-[1440px] px-5 md:px-10 xl:px-[120px];
+  }
+  .caption {
+    @apply font-sans text-[13px] font-medium uppercase tracking-[0.08em];
+  }
+  .caret {
+    display: inline-block;
+    width: 2px;
+    height: 0.8em;
+    margin-left: 0.06em;
+    background: currentColor;
+    vertical-align: -0.04em;
+    animation: blink 1s steps(1) infinite;
+  }
+  .spaced {
+    @apply font-serif font-normal leading-[0.95] tracking-[0.12em] md:tracking-[0.3em];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
