@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { gsap, INTRO_DELAY, ScrollTrigger } from '../lib/motion'
+import { gsap, introDelay, ScrollTrigger } from '../lib/motion'
 import { prefersReducedMotion } from '../lib/useCanvas'
 
 /*
@@ -106,31 +106,9 @@ export function DotWord({ text = 'KLARDATALABS', muteFrom = 4, tone = 'dark', no
   )
 }
 
-/** The symbol: a dotted "K" inside a 5×5 field of faint noise dots, with the red full stop in the corner. */
-const K_CELLS = new Set(['0,0', '0,1', '0,2', '0,3', '0,4', '1,2', '2,1', '3,0', '2,3', '3,4'])
-const MARK_CELLS = []
-for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) if (!(x === 4 && y === 4)) MARK_CELLS.push({ x, y, k: K_CELLS.has(`${x},${y}`) })
-
-export function KlarMark({ className = 'h-10 w-10', interactive = true, intro = false, delay = 0 }) {
-  const ref = useRef(null)
-  useDotMotion(ref, { intro, interactive, delay })
-  return (
-    <svg ref={ref} viewBox="0 0 40 40" aria-hidden="true" className={`overflow-visible ${className}`}>
-      {MARK_CELLS.map(({ x, y, k }) =>
-        k ? (
-          <circle key={`${x}${y}`} data-lit cx={4 + x * STEP} cy={4 + y * STEP} r={R_LIT} fill="currentColor" />
-        ) : (
-          <circle key={`${x}${y}`} data-noise cx={4 + x * STEP} cy={4 + y * STEP} r={R_NOISE} fill="currentColor" opacity="0.22" />
-        ),
-      )}
-      <circle data-stop className="text-klar" cx={36.5} cy={36.5} r={R_LIT + 0.8} fill="currentColor" />
-    </svg>
-  )
-}
-
 /** Header wordmark. */
 export function Wordmark({ tone = 'dark', className = '' }) {
-  return <DotWord tone={tone} intro delay={INTRO_DELAY - 0.2} className={`h-[18px] lg:h-5 ${className}`} />
+  return <DotWord tone={tone} intro delay={Math.max(0, introDelay() - 0.2)} className={`h-[18px] lg:h-5 ${className}`} />
 }
 
 /**

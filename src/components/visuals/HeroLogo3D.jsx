@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { gsap, INTRO_DELAY, ScrollTrigger } from '../../lib/motion'
+import { gsap, introDelay, isIntroDone, ScrollTrigger } from '../../lib/motion'
 import { prefersReducedMotion } from '../../lib/useCanvas'
 
 /*
@@ -95,7 +95,9 @@ export default function HeroLogo3D({ scrollEnd = '+=90%' }) {
 
     const still = prefersReducedMotion()
     // from/to: shape indices; t: progress of the current change; burst: opening scatter; scroll: pinned break-apart
-    const state = { from: 0, to: 0, t: 1, burst: still ? 0 : 1, scroll: 0 }
+    // first visit: the mark bursts in from across the screen; later remounts (language switch) start assembled
+    const replay = isIntroDone()
+    const state = { from: 0, to: 0, t: 1, burst: still || replay ? 0 : 1, scroll: 0 }
     const pointer = { x: 9, y: 9, inside: false }
     const drag = { on: false, lastX: 0, vel: 0, moved: 0, downAt: 0 }
     const place = { x: 0, y: 0, scale: 1, visW: 10, visH: 6 } // where the mark sits on screen
@@ -175,14 +177,15 @@ export default function HeroLogo3D({ scrollEnd = '+=90%' }) {
         layout()
         dots.forEach((d, i) => {
           mesh.setColorAt(i, d.kind === 'red' ? RED : INK)
-          d.pos.copy(d.scatter) // start spread over the whole screen
+          if (replay) d.pos.set(place.x, place.y, 0)
+          else d.pos.copy(d.scatter) // start spread over the whole screen
         })
         mesh.instanceColor.needsUpdate = true
         scene.add(mesh)
 
         if (still) return render(0)
-        gsap.to(state, { burst: 0, duration: 2.6, ease: 'expo.out', delay: Math.max(0, INTRO_DELAY - 0.3) })
-        scheduleCycle((INTRO_DELAY + 5) * 1000)
+        gsap.to(state, { burst: 0, duration: 2.6, ease: 'expo.out', delay: Math.max(0, introDelay() - 0.3) })
+        scheduleCycle((introDelay() + 5) * 1000)
       })
       .catch(() => {})
     layout()

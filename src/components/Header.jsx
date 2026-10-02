@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LangToggle, useLang } from '../i18n'
 import { links } from '../i18n/links'
-import { gsap, INTRO_DELAY, lockScroll } from '../lib/motion'
+import { gsap, lockScroll } from '../lib/motion'
 import { followLink, localHref, pathFor } from '../lib/router'
 import { prefersReducedMotion } from '../lib/useCanvas'
 import { FlipText } from './fx'
-import { KlarMark, Wordmark } from './Logo'
+import { Wordmark } from './Logo'
 import { Button } from './ui'
 
 function MenuDots({ open }) {
@@ -80,22 +80,19 @@ export default function Header() {
           <a href={`${pathFor('home', lang)}#top`} aria-label={t.ui.home} onClick={() => setOpen(false)}>
             <Wordmark />
           </a>
-          {/* the noisy dotted K — its dots scatter and snap back on hover */}
-          <a href={`${pathFor('home', lang)}#top`} aria-hidden="true" tabIndex={-1} className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-ink sm:block">
-            <KlarMark className="h-10 w-10" intro delay={INTRO_DELAY - 0.2} />
-          </a>
-          <div className="flex items-center gap-5">
-            <LangToggle />
+          {/* menu button in the centre (beside the toggle on phones); language toggle last */}
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
               aria-controls="site-menu"
               aria-label={open ? t.ui.menuClose : t.ui.menuOpen}
-              className="group -mr-2 flex h-11 w-11 items-center justify-center"
+              className="group flex h-11 w-11 items-center justify-center sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2"
             >
               <MenuDots open={open} />
             </button>
+            <LangToggle />
           </div>
         </div>
       </header>

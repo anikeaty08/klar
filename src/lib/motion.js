@@ -25,6 +25,14 @@ export const getLenis = () => lenis
 /** Seconds the intro loader covers the page; hero animations start after it. */
 export const INTRO_DELAY = prefersReducedMotion() ? 0 : 1.6
 
+// after the first visit's intro, remounts (e.g. a language switch) animate in right away
+let introDone = prefersReducedMotion()
+export const markIntroDone = () => {
+  introDone = true
+}
+export const introDelay = () => (introDone ? 0.1 : INTRO_DELAY)
+export const isIntroDone = () => introDone
+
 export function lockScroll(locked) {
   if (lenis) locked ? lenis.stop() : lenis.start()
   document.documentElement.style.overflow = locked ? 'hidden' : ''

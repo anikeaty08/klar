@@ -47,6 +47,22 @@
     @apply bg-paper font-sans text-[17px] text-ink antialiased;
     overflow-x: clip;
   }
+  /* pointing hand on everything clickable (Tailwind v4 resets buttons to the default arrow) */
+  a[href],
+  button:not(:disabled),
+  [role='button'],
+  [role='radio'],
+  [role='tab'],
+  label[for],
+  select,
+  summary,
+  input[type='checkbox'],
+  input[type='radio'] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
   ::selection {
     background: var(--color-ink);
     color: var(--color-paper);

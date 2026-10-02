@@ -28,9 +28,13 @@ function initialLang() {
 export function LangProvider({ children }) {
   const [lang, setLangState] = useState(initialLang)
   const [content, setContent] = useState(() => (initialLang() === 'en' ? en : null))
-  const curtain = useRef(null)
+  // two-step switch: a dark curtain rises from the bottom, then a sand panel sweeps in from the right
+  const curtainV = useRef(null)
+  const curtainH = useRef(null)
   const label = useRef(null)
   const reveal = useRef(false)
+  const HIDDEN_V = 'inset(100% 0% 0% 0%)'
+  const HIDDEN_H = 'inset(0% 0% 0% 100%)'
 
   useEffect(() => {
     let alive = true
@@ -50,19 +54,19 @@ export function LangProvider({ children }) {
     }
   }, [lang])
 
-  // once the new language has rendered, lift the curtain
+  // once the new language has rendered: the sand panel leaves to the left, then the dark curtain lifts off the top
   useEffect(() => {
     if (!reveal.current || content?.lang !== lang) return
     reveal.current = false
     requestAnimationFrame(() =>
       requestAnimationFrame(() =>
-        gsap.to(curtain.current, {
-          clipPath: 'inset(0% 0% 100% 0%)',
-          duration: 0.7,
-          ease: 'expo.inOut',
-          delay: 0.1,
-          onComplete: () => gsap.set(curtain.current, { clipPath: 'inset(100% 0% 0% 0%)', visibility: 'hidden' }),
-        }),
+        gsap
+          .timeline({
+            delay: 0.1,
+            onComplete: () => gsap.set([curtainV.current, curtainH.current], { visibility: 'hidden', clipPath: (i) => (i ? HIDDEN_H : HIDDEN_V) }),
+          })
+          .to(curtainH.current, { clipPath: 'inset(0% 100% 0% 0%)', duration: 0.6, ease: 'expo.inOut' })
+          .to(curtainV.current, { clipPath: 'inset(0% 0% 100% 0%)', duration: 0.65, ease: 'expo.inOut' }, '-=0.3'),
       ),
     )
   }, [content, lang])
@@ -71,19 +75,20 @@ export function LangProvider({ children }) {
     (next) => {
       next = next === 'de' ? 'de' : 'en'
       if (next === lang) return
-      if (prefersReducedMotion() || !curtain.current) return setLangState(next)
+      if (prefersReducedMotion() || !curtainV.current) return setLangState(next)
       label.current.textContent = NAMES[next]
-      gsap.set(curtain.current, { visibility: 'visible', clipPath: 'inset(100% 0% 0% 0%)' })
-      gsap.fromTo(label.current, { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'expo.out', delay: 0.2 })
-      gsap.to(curtain.current, {
-        clipPath: 'inset(0% 0% 0% 0%)',
-        duration: 0.55,
-        ease: 'expo.inOut',
-        onComplete: () => {
-          reveal.current = true
-          setLangState(next)
-        },
-      })
+      gsap.set(curtainV.current, { visibility: 'visible', clipPath: HIDDEN_V })
+      gsap.set(curtainH.current, { visibility: 'visible', clipPath: HIDDEN_H })
+      gsap
+        .timeline({
+          onComplete: () => {
+            reveal.current = true
+            setLangState(next)
+          },
+        })
+        .to(curtainV.current, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.5, ease: 'expo.inOut' })
+        .to(curtainH.current, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.6, ease: 'expo.inOut' }, '+=0.05')
+        .fromTo(label.current, { xPercent: 30, opacity: 0 }, { xPercent: 0, opacity: 1, duration: 0.6, ease: 'expo.out' }, '-=0.3')
     },
     [lang],
   )
@@ -91,13 +96,14 @@ export function LangProvider({ children }) {
   return (
     <>
       {content && <LangContext.Provider value={{ lang: content.lang, t: content, setLang }}>{children}</LangContext.Provider>}
+      <div ref={curtainV} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[500] bg-ink" style={{ clipPath: HIDDEN_V, visibility: 'hidden' }} />
       <div
-        ref={curtain}
+        ref={curtainH}
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-[500] flex items-center justify-center bg-ink"
-        style={{ clipPath: 'inset(100% 0% 0% 0%)', visibility: 'hidden' }}
+        className="pointer-events-none fixed inset-0 z-[501] flex items-center justify-center bg-sand"
+        style={{ clipPath: HIDDEN_H, visibility: 'hidden' }}
       >
-        <span className="flex items-baseline overflow-hidden font-serif text-[clamp(3rem,8vw,7rem)] leading-none text-paper">
+        <span className="flex items-baseline overflow-hidden font-serif text-[clamp(3rem,8vw,7rem)] leading-none text-ink">
           <span ref={label} className="inline-block" />
           <span className="ml-1 inline-block h-[0.14em] w-[0.14em] rounded-full bg-klar" />
         </span>

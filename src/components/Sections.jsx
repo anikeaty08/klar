@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useLang } from '../i18n'
-import { gsap, INTRO_DELAY } from '../lib/motion'
+import { gsap, introDelay } from '../lib/motion'
 import { pathFor } from '../lib/router'
 import { prefersReducedMotion } from '../lib/useCanvas'
 import { FlipChars, FlipText, Reveal, RevealTitle, Scramble, ScrubWords, TypedWord } from './fx'
@@ -44,7 +44,7 @@ export function Hero() {
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return
     const ctx = gsap.context(() => {
-      gsap.from('[data-hero-in]', { y: 28, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: 0.1, delay: INTRO_DELAY + 0.55 })
+      gsap.from('[data-hero-in]', { y: 28, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: 0.1, delay: introDelay() + 0.55 })
       // hold the hero full screen while the logo breaks apart; the copy drifts up and fades with it
       gsap
         .timeline({ scrollTrigger: { trigger: root.current, start: 'top top', end: HERO_PIN, pin: true, scrub: true, anticipatePin: 1 } })
@@ -65,8 +65,8 @@ export function Hero() {
             <Scramble text={t.hero.eyebrow} />
           </p>
           <h1 aria-label={t.hero.title} className="pointer-events-auto font-serif text-[clamp(2.5rem,5.2vw,5rem)] leading-[1.02] tracking-[-0.015em]">
-            <FlipChars as="span" text={t.hero.lead} delay={INTRO_DELAY + 0.15} className="block" />
-            <TypedWord words={t.hero.words} delay={INTRO_DELAY + 1.1} className="block whitespace-nowrap text-taupe" />
+            <FlipChars as="span" text={t.hero.lead} delay={introDelay() + 0.15} className="block" />
+            <TypedWord words={t.hero.words} delay={introDelay() + 1.1} className="block whitespace-nowrap text-taupe" />
           </h1>
           <p data-hero-in className="mt-8 max-w-md text-[17px] leading-relaxed text-ink/75 lg:text-lg">
             {t.hero.body}
