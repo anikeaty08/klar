@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { links, menu } from '../data/content'
-import { goTo, gsap, INTRO_DELAY, lockScroll } from '../lib/motion'
+import { LangToggle, useLang } from '../i18n'
+import { links } from '../i18n/links'
+import { gsap, INTRO_DELAY, lockScroll } from '../lib/motion'
+import { followLink, localHref, pathFor } from '../lib/router'
 import { prefersReducedMotion } from '../lib/useCanvas'
 import { FlipText } from './fx'
 import { KlarMark, Wordmark } from './Logo'
@@ -21,6 +23,7 @@ function MenuDots({ open }) {
 }
 
 export default function Header() {
+  const { t, lang } = useLang()
   const [open, setOpen] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -62,61 +65,71 @@ export default function Header() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
+  // close the menu first, then scroll / change page once the panel has wiped away
+  const fromMenu = (e, href) => {
+    e.preventDefault()
+    setOpen(false)
+    setTimeout(() => followLink(href), 450)
+  }
+
   return (
     <>
       <header className={`fixed inset-x-0 top-0 z-[70] transition-transform duration-500 ease-snap ${hidden && !open ? '-translate-y-full' : ''}`}>
         <div aria-hidden="true" className={`absolute inset-0 bg-paper/85 backdrop-blur-md transition-opacity duration-500 ${scrolled && !open ? 'opacity-100' : 'opacity-0'}`} />
         <div className="container-x relative flex items-center justify-between py-5 lg:py-7">
-          <a href="#top" aria-label="KlarDataLabs — back to top" onClick={() => setOpen(false)}>
+          <a href={`${pathFor('home', lang)}#top`} aria-label={t.ui.home} onClick={() => setOpen(false)}>
             <Wordmark />
           </a>
-          <a href="#top" aria-hidden="true" tabIndex={-1} className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-ink sm:block" data-cursor>
+          {/* the noisy dotted K — its dots scatter and snap back on hover */}
+          <a href={`${pathFor('home', lang)}#top`} aria-hidden="true" tabIndex={-1} className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-ink sm:block">
             <KlarMark className="h-10 w-10" intro delay={INTRO_DELAY - 0.2} />
           </a>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-controls="site-menu"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            className="group -mr-2 flex h-11 w-11 items-center justify-center"
-          >
-            <MenuDots open={open} />
-          </button>
+          <div className="flex items-center gap-5">
+            <LangToggle />
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls="site-menu"
+              aria-label={open ? t.ui.menuClose : t.ui.menuOpen}
+              className="group -mr-2 flex h-11 w-11 items-center justify-center"
+            >
+              <MenuDots open={open} />
+            </button>
+          </div>
         </div>
       </header>
 
       <div ref={panel} id="site-menu" className="fixed inset-0 z-[60] flex flex-col bg-paper" aria-hidden={!open}>
         <nav aria-label="Main" className="container-x flex flex-1 flex-col justify-center pt-24">
           <ul className="[perspective:1000px]">
-            {menu.map((m, i) => (
-              <li key={m.label} data-menu-item className="border-b border-ink/10">
-                <a
-                  href={m.href}
-                  tabIndex={open ? 0 : -1}
-                  {...(m.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                  onClick={(e) => {
-                    setOpen(false)
-                    if (m.href.startsWith('#')) {
-                      e.preventDefault()
-                      setTimeout(() => goTo(m.href), 450)
-                    }
-                  }}
-                  className="group flex items-baseline justify-between py-5 font-serif text-[clamp(2rem,5.5vw,4.25rem)] leading-none text-ink"
-                >
-                  <FlipText text={m.label} stagger={14} />
-                  <span className="caption text-taupe transition-transform duration-500 ease-snap group-hover:-translate-x-3">0{i + 1}</span>
-                </a>
-              </li>
-            ))}
+            {t.menu.map((m, i) => {
+              const href = localHref(m.href, lang)
+              return (
+                <li key={m.href} data-menu-item className="border-b border-ink/10">
+                  <a
+                    href={href}
+                    tabIndex={open ? 0 : -1}
+                    onClick={(e) => fromMenu(e, href)}
+                    className="group flex items-baseline justify-between py-5 font-serif text-[clamp(2rem,5.5vw,4.25rem)] leading-none text-ink"
+                  >
+                    <FlipText text={m.label} stagger={14} />
+                    <span className="caption text-taupe transition-transform duration-500 ease-snap group-hover:-translate-x-3">0{i + 1}</span>
+                  </a>
+                </li>
+              )
+            })}
           </ul>
         </nav>
         <div data-menu-foot className="container-x flex flex-col gap-4 py-10 sm:flex-row sm:items-center sm:justify-between">
-          <a href={`mailto:${links.email}`} tabIndex={open ? 0 : -1} className="text-taupe hover:text-ink">
-            {links.email}
-          </a>
-          <Button href={links.booking} external tabIndex={open ? 0 : -1}>
-            Start a conversation
+          <div className="flex flex-wrap items-center gap-6">
+            <LangToggle size="lg" />
+            <a href={`mailto:${links.email}`} tabIndex={open ? 0 : -1} className="text-taupe hover:text-ink">
+              {links.email}
+            </a>
+          </div>
+          <Button href={pathFor('contact', lang)} tabIndex={open ? 0 : -1} onClick={(e) => fromMenu(e, pathFor('contact', lang))}>
+            {t.ui.contactUs}
           </Button>
         </div>
       </div>

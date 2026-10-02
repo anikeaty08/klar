@@ -13,7 +13,7 @@ let lenis = null
 /** Smooth scrolling driven by GSAP's ticker so ScrollTrigger stays in sync. */
 export function initSmoothScroll() {
   if (lenis || prefersReducedMotion()) return lenis
-  lenis = new Lenis({ duration: 1.15, anchors: { offset: 0 }, smoothWheel: true })
+  lenis = new Lenis({ duration: 1.15, smoothWheel: true })
   lenis.on('scroll', ScrollTrigger.update)
   gsap.ticker.add((time) => lenis.raf(time * 1000))
   gsap.ticker.lagSmoothing(0)
@@ -30,14 +30,25 @@ export function lockScroll(locked) {
   document.documentElement.style.overflow = locked ? 'hidden' : ''
 }
 
-/** Scroll to an in-page anchor, through Lenis when it's running. */
-export function goTo(hash) {
-  const el = document.querySelector(hash)
-  if (!el) return
+/**
+ * Scroll to an in-page anchor, through Lenis when it's running.
+ * Pinned sections are wrapped in a GSAP pin-spacer whose own top is the real
+ * position to scroll to — scrolling to the pinned element itself would land
+ * partway through its pin (that's what left the hero faded after "Back to top").
+ */
+export function goTo(hash, { immediate = false } = {}) {
+  let top = 0
+  if (hash && hash !== '#top') {
+    const el = document.querySelector(hash)
+    if (!el) return
+    const target = el.parentElement?.classList.contains('pin-spacer') ? el.parentElement : el
+    top = target.getBoundingClientRect().top + window.scrollY
+  }
   if (lenis) {
     lenis.start()
-    lenis.scrollTo(el, { duration: 1.4 })
+    lenis.resize() // the page may have just changed height (e.g. coming from /contact)
+    lenis.scrollTo(top, { duration: immediate ? 0 : 1.4, immediate, force: true })
   } else {
-    el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+    window.scrollTo({ top, behavior: immediate || prefersReducedMotion() ? 'auto' : 'smooth' })
   }
 }

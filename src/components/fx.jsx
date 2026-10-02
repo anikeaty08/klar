@@ -38,7 +38,7 @@ export function FlipText({ text, className = '', stagger = 16 }) {
   return (
     <span className={`relative ${className}`}>
       <span className="sr-only">{text}</span>
-      <span aria-hidden="true">
+      <span aria-hidden="true" className="select-none">
         {words.map((w, wi) => (
           <span key={wi}>
             <span className="inline-flex overflow-hidden align-bottom [perspective:400px]">
