@@ -91,23 +91,12 @@ export default async function handler(req, res) {
 }
 
 /* ------------------------------------------------------------ visitor location
- * City-level location for the team email (never a street address). Uses the host's
- * own geo headers when it has them (Vercel, Cloudflare, Netlify), otherwise looks the
- * visitor's IP up at ipinfo.io. Any failure just leaves the location out.
+ * City-level location for the team email (never a street address), looked up from
+ * the visitor's IP at ipinfo.io. Any failure just leaves the location out.
  *   IPINFO_TOKEN  optional — ipinfo.io token; works without one at a lower daily limit
  */
 
 const EMPTY_GEO = { city: '', region: '', country: '', timezone: '', lat: null, lon: null }
-
-const header = (h, k) => {
-  const v = h[k]
-  if (!v) return ''
-  try {
-    return decodeURIComponent(Array.isArray(v) ? v[0] : v)
-  } catch {
-    return String(v)
-  }
-}
 
 const countryName = (code) => {
   try {
@@ -120,63 +109,15 @@ const countryName = (code) => {
 const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v))
 
 function clientIp(req) {
-  const h = req.headers
-  const ip =
-    header(h, 'cf-connecting-ip') ||
-    header(h, 'x-nf-client-connection-ip') ||
-    header(h, 'x-forwarded-for').split(',')[0].trim() ||
-    header(h, 'x-real-ip') ||
-    req.socket?.remoteAddress ||
-    ''
+  const first = (v) => String(Array.isArray(v) ? v[0] : v || '').split(',')[0].trim()
+  const ip = first(req.headers['x-forwarded-for']) || first(req.headers['x-real-ip']) || req.socket?.remoteAddress || ''
   return ip.replace(/^::ffff:/, '')
 }
 
 // loopback / private ranges can't be located (local dev)
 const isPrivate = (ip) => !ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fc|fd|fe80)/i.test(ip)
 
-function geoFromHeaders(h) {
-  if (h['x-vercel-ip-country']) {
-    return {
-      city: header(h, 'x-vercel-ip-city'),
-      region: header(h, 'x-vercel-ip-country-region'),
-      country: countryName(header(h, 'x-vercel-ip-country')),
-      timezone: header(h, 'x-vercel-ip-timezone'),
-      lat: num(header(h, 'x-vercel-ip-latitude')),
-      lon: num(header(h, 'x-vercel-ip-longitude')),
-    }
-  }
-  if (h['x-nf-geo']) {
-    try {
-      const g = JSON.parse(Buffer.from(header(h, 'x-nf-geo'), 'base64').toString('utf8'))
-      return {
-        city: g.city || '',
-        region: g.subdivision?.name || g.subdivision?.code || '',
-        country: g.country?.name || countryName(g.country?.code || ''),
-        timezone: g.timezone || '',
-        lat: num(g.latitude),
-        lon: num(g.longitude),
-      }
-    } catch {
-      // fall through to the lookup
-    }
-  }
-  // Cloudflare's city/timezone headers need the "visitor location headers" transform enabled
-  if (h['cf-ipcity']) {
-    return {
-      city: header(h, 'cf-ipcity'),
-      region: header(h, 'cf-region'),
-      country: countryName(header(h, 'cf-ipcountry')),
-      timezone: header(h, 'cf-timezone'),
-      lat: num(header(h, 'cf-iplatitude')),
-      lon: num(header(h, 'cf-iplongitude')),
-    }
-  }
-  return null
-}
-
 async function geoFor(req) {
-  const fromHost = geoFromHeaders(req.headers)
-  if (fromHost) return fromHost
   const ip = clientIp(req)
   if (isPrivate(ip)) return EMPTY_GEO
   try {
