@@ -20,6 +20,22 @@ function zurichTime(date = new Date()) {
   return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Zurich' }).format(date) + ' (Zürich)'
 }
 
+/** "Bengaluru, KA, India" from the request's IP geolocation; '' when unknown. */
+function placeName(geo) {
+  if (!geo) return ''
+  return [geo.city, geo.region && geo.region !== geo.city ? geo.region : '', geo.country].filter(Boolean).join(', ')
+}
+
+/** The visitor's own clock at the time they wrote, e.g. "3 Oct 2026, 01:48 (Asia/Kolkata)". */
+function localTime(geo, date = new Date()) {
+  if (!geo?.timezone) return ''
+  try {
+    return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: geo.timezone }).format(date) + ` (${geo.timezone})`
+  } catch {
+    return ''
+  }
+}
+
 /** Outer frame shared by both emails. */
 function frame({ preheader, body, footer }) {
   return `<!doctype html>
@@ -69,15 +85,26 @@ const button = (href, label) => `
 export function notificationEmail(f) {
   const who = f.company ? `${f.name} from ${f.company}` : f.name
   const replyHref = `mailto:${f.email}?subject=${encodeURIComponent('Re: your enquiry to KlarDataLabs')}`
+  const now = new Date()
+  const place = placeName(f.geo)
+  const mapHref = f.geo?.lat != null && f.geo?.lon != null ? `https://www.google.com/maps?q=${f.geo.lat},${f.geo.lon}` : ''
+  const theirTime = localTime(f.geo, now)
+  // [label, html, plain text]
   const rows = [
-    ['Email', `<a href="mailto:${esc(f.email)}" style="color:${C.ink};">${esc(f.email)}</a>`],
-    ['Company', esc(f.company)],
-    ['Role', esc(f.role)],
-    ['Website', f.website ? `<a href="${esc(/^https?:\/\//.test(f.website) ? f.website : `https://${f.website}`)}" style="color:${C.ink};">${esc(f.website)}</a>` : ''],
-    ['Timeline', esc(f.timeline)],
-    ['Heard about us', esc(f.source)],
-    ['Language', f.lang === 'de' ? 'German' : 'English'],
-    ['Received', zurichTime()],
+    ['Email', `<a href="mailto:${esc(f.email)}" style="color:${C.ink};">${esc(f.email)}</a>`, f.email],
+    ['Company', esc(f.company), f.company],
+    ['Role', esc(f.role), f.role],
+    ['Website', f.website ? `<a href="${esc(/^https?:\/\//.test(f.website) ? f.website : `https://${f.website}`)}" style="color:${C.ink};">${esc(f.website)}</a>` : '', f.website],
+    ['Timeline', esc(f.timeline), f.timeline],
+    ['Heard about us', esc(f.source), f.source],
+    ['Language', f.lang === 'de' ? 'German' : 'English', f.lang === 'de' ? 'German' : 'English'],
+    [
+      'Location',
+      place && `${esc(place)}${mapHref ? ` &nbsp;<a href="${mapHref}" style="color:${C.taupe};font-size:13px;">View map</a>` : ''}<br><span style="font-size:12px;color:${C.taupe};">Approximate, based on IP address</span>`,
+      place && `${place} (approx., from IP)${mapHref ? ` ${mapHref}` : ''}`,
+    ],
+    ['Their local time', esc(theirTime), theirTime],
+    ['Received', zurichTime(now), zurichTime(now)],
   ].filter(([, v]) => v)
 
   const body = `
@@ -106,10 +133,7 @@ export function notificationEmail(f) {
     'Message:',
     f.message,
     '',
-    ...rows.map(([k]) => {
-      const raw = { Email: f.email, Company: f.company, Role: f.role, Website: f.website, Timeline: f.timeline, 'Heard about us': f.source, Language: f.lang === 'de' ? 'German' : 'English', Received: zurichTime() }[k]
-      return `${k}: ${raw}`
-    }),
+    ...rows.map(([k, , raw]) => `${k}: ${raw}`),
   ]
     .filter((l) => l !== null)
     .join('\n')

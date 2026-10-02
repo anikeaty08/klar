@@ -10,6 +10,7 @@
  *                   e.g. "KlarDataLabs Website <website@klardatalabs.com>".
  *                   Until the domain is verified, Resend's test sender
  *                   onboarding@resend.dev only delivers to the Resend account's own email.
+ *   IPINFO_TOKEN    optional — ipinfo.io token for the visitor-location lookup
  *   CONTACT_AUTOREPLY optional — "true" also sends the visitor a branded confirmation
  *                   (EN/DE). Only turn on once the domain is verified.
  */
@@ -61,7 +62,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'not_configured' })
   }
 
-  const data = { ...f, needs, lang }
+  const data = { ...f, needs, lang, geo: await geoFor(req) }
   const send = (payload) =>
     fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -86,5 +87,108 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('contact: request to Resend failed', err)
     return res.status(502).json({ ok: false, error: 'send_failed' })
+  }
+}
+
+/* ------------------------------------------------------------ visitor location
+ * City-level location for the team email (never a street address). Uses the host's
+ * own geo headers when it has them (Vercel, Cloudflare, Netlify), otherwise looks the
+ * visitor's IP up at ipinfo.io. Any failure just leaves the location out.
+ *   IPINFO_TOKEN  optional — ipinfo.io token; works without one at a lower daily limit
+ */
+
+const EMPTY_GEO = { city: '', region: '', country: '', timezone: '', lat: null, lon: null }
+
+const header = (h, k) => {
+  const v = h[k]
+  if (!v) return ''
+  try {
+    return decodeURIComponent(Array.isArray(v) ? v[0] : v)
+  } catch {
+    return String(v)
+  }
+}
+
+const countryName = (code) => {
+  try {
+    return (code && new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase())) || code
+  } catch {
+    return code
+  }
+}
+
+const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v))
+
+function clientIp(req) {
+  const h = req.headers
+  const ip =
+    header(h, 'cf-connecting-ip') ||
+    header(h, 'x-nf-client-connection-ip') ||
+    header(h, 'x-forwarded-for').split(',')[0].trim() ||
+    header(h, 'x-real-ip') ||
+    req.socket?.remoteAddress ||
+    ''
+  return ip.replace(/^::ffff:/, '')
+}
+
+// loopback / private ranges can't be located (local dev)
+const isPrivate = (ip) => !ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|fc|fd|fe80)/i.test(ip)
+
+function geoFromHeaders(h) {
+  if (h['x-vercel-ip-country']) {
+    return {
+      city: header(h, 'x-vercel-ip-city'),
+      region: header(h, 'x-vercel-ip-country-region'),
+      country: countryName(header(h, 'x-vercel-ip-country')),
+      timezone: header(h, 'x-vercel-ip-timezone'),
+      lat: num(header(h, 'x-vercel-ip-latitude')),
+      lon: num(header(h, 'x-vercel-ip-longitude')),
+    }
+  }
+  if (h['x-nf-geo']) {
+    try {
+      const g = JSON.parse(Buffer.from(header(h, 'x-nf-geo'), 'base64').toString('utf8'))
+      return {
+        city: g.city || '',
+        region: g.subdivision?.name || g.subdivision?.code || '',
+        country: g.country?.name || countryName(g.country?.code || ''),
+        timezone: g.timezone || '',
+        lat: num(g.latitude),
+        lon: num(g.longitude),
+      }
+    } catch {
+      // fall through to the lookup
+    }
+  }
+  // Cloudflare's city/timezone headers need the "visitor location headers" transform enabled
+  if (h['cf-ipcity']) {
+    return {
+      city: header(h, 'cf-ipcity'),
+      region: header(h, 'cf-region'),
+      country: countryName(header(h, 'cf-ipcountry')),
+      timezone: header(h, 'cf-timezone'),
+      lat: num(header(h, 'cf-iplatitude')),
+      lon: num(header(h, 'cf-iplongitude')),
+    }
+  }
+  return null
+}
+
+async function geoFor(req) {
+  const fromHost = geoFromHeaders(req.headers)
+  if (fromHost) return fromHost
+  const ip = clientIp(req)
+  if (isPrivate(ip)) return EMPTY_GEO
+  try {
+    const token = process.env.IPINFO_TOKEN ? `?token=${encodeURIComponent(process.env.IPINFO_TOKEN)}` : ''
+    const r = await fetch(`https://ipinfo.io/${encodeURIComponent(ip)}/json${token}`, { signal: AbortSignal.timeout(2000) })
+    if (!r.ok) return EMPTY_GEO
+    const g = await r.json()
+    if (g.bogon) return EMPTY_GEO
+    const [lat, lon] = String(g.loc || '').split(',')
+    return { city: g.city || '', region: g.region || '', country: countryName(g.country || ''), timezone: g.timezone || '', lat: num(lat), lon: num(lon) }
+  } catch (err) {
+    console.error('contact: location lookup failed', err?.message)
+    return EMPTY_GEO
   }
 }
