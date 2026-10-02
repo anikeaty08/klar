@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* lab only (git-ignored files Tailwind would otherwise skip) — remove once a Services option is chosen */
+@source "./components/variants";
+@source "./lab";
+
 /* One-colour palette (warm ink on paper), modelled on tribe.ai */
 @theme {
   --color-paper: #fafaf8;

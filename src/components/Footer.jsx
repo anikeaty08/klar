@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef } from 'react'
-import { footer, links, manifesto } from '../data/content'
+import { LangToggle, useLang } from '../i18n'
+import { address, links } from '../i18n/links'
 import { goTo, gsap } from '../lib/motion'
+import { localHref, pathFor } from '../lib/router'
 import { prefersReducedMotion } from '../lib/useCanvas'
 import { FlipChars, FlipText, Scramble } from './fx'
 import { DotWordPlay } from './Logo'
@@ -25,7 +27,9 @@ function FooterLink({ href, children, external }) {
   )
 }
 
-export default function Footer() {
+/** `compact` drops the big call to action (used on the contact page itself). */
+export default function Footer({ compact = false }) {
+  const { t, lang } = useLang()
   const root = useRef(null)
   const inner = useRef(null)
 
@@ -46,45 +50,52 @@ export default function Footer() {
   return (
     <footer ref={root} className="relative -mt-[28px] overflow-hidden bg-ink pt-[28px] text-stone">
       <div ref={inner}>
-        <div className="container-x pt-24 lg:pt-32">
-          <p className="caption text-[11px] text-taupe">Start with a free assessment call</p>
-          <FlipChars as="p" text={manifesto} onScroll className="mt-8 max-w-[19ch] font-serif text-[clamp(2.4rem,5.4vw,5.2rem)] leading-[1.04] text-paper" />
-          <div className="mt-12 flex flex-wrap gap-4">
-            <Button href={links.booking} external variant="light">
-              Book a free consultation
-            </Button>
-            <Button href={`mailto:${links.email}`} variant="outline" className="text-paper">
-              Email us
-            </Button>
+        {!compact && (
+          <div className="container-x pt-24 lg:pt-32">
+            <p className="caption text-[11px] text-taupe">{t.footer.caption}</p>
+            <FlipChars as="p" text={t.footer.line} onScroll className="mt-8 max-w-[19ch] font-serif text-[clamp(2.4rem,5.4vw,5.2rem)] leading-[1.04] text-paper" />
+            <div className="mt-12">
+              <Button href={pathFor('contact', lang)} variant="light">
+                {t.ui.contactUs}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="container-x mt-24 grid gap-12 border-t border-paper/10 pt-14 sm:grid-cols-2 lg:grid-cols-12">
-          <Col title="Our vision" className="sm:col-span-2 lg:col-span-5">
-            <p className="max-w-sm leading-relaxed text-paper/75">{footer.vision}</p>
+        <div className={`container-x grid gap-12 border-paper/10 sm:grid-cols-2 lg:grid-cols-12 ${compact ? 'pt-24' : 'mt-24 border-t pt-14'}`}>
+          <Col title={t.footer.visionTitle} className="sm:col-span-2 lg:col-span-5">
+            <p className="max-w-sm leading-relaxed text-paper/75">{t.footer.vision}</p>
           </Col>
-          <Col title="Company" className="lg:col-span-2 lg:col-start-7">
+          <Col title={t.footer.companyTitle} className="lg:col-span-2 lg:col-start-7">
             <ul className="space-y-3">
-              {footer.company.map((c) => (
-                <li key={c.label}>
-                  <FooterLink href={c.href} external={c.external}>
-                    {c.label}
-                  </FooterLink>
+              {t.footer.company.map((c) => (
+                <li key={c.href}>
+                  <FooterLink href={localHref(c.href, lang)}>{c.label}</FooterLink>
                 </li>
               ))}
             </ul>
           </Col>
-          <Col title="Offices" className="lg:col-span-2">
+          <Col title={t.footer.officesTitle} className="lg:col-span-2">
             <ul className="space-y-3">
-              {footer.offices.map((o) => (
+              {t.footer.offices.map((o) => (
                 <li key={o} className="text-paper/80">
                   <Scramble text={o} />
                 </li>
               ))}
             </ul>
+            <address className="mt-6 text-[14px] not-italic leading-relaxed text-paper/55">
+              {address[lang].map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
+            </address>
           </Col>
-          <Col title="Connect" className="lg:col-span-2">
+          <Col title={t.footer.connectTitle} className="lg:col-span-2">
             <ul className="space-y-3">
+              <li>
+                <FooterLink href={`mailto:${links.email}`}>{links.email}</FooterLink>
+              </li>
               <li>
                 <FooterLink href={links.linkedin} external>
                   LinkedIn
@@ -95,11 +106,8 @@ export default function Footer() {
                   GitHub
                 </FooterLink>
               </li>
-              <li>
-                <FooterLink href={`mailto:${links.email}`}>Email</FooterLink>
-              </li>
-              <li>
-                <FooterLink href={links.german}>Deutsch</FooterLink>
+              <li className="pt-2">
+                <LangToggle tone="light" />
               </li>
             </ul>
           </Col>
@@ -114,7 +122,7 @@ export default function Footer() {
             © {new Date().getFullYear()} KlarDataLabs <span className="mx-2">•</span> {links.email}
           </p>
           <button type="button" onClick={() => goTo('#top')} className="caption group inline-flex items-center gap-2 text-[11px] text-taupe transition-colors hover:text-paper">
-            <FlipText text="Back to top" stagger={12} />
+            <FlipText text={t.ui.backToTop} stagger={12} />
             <Chevron className="h-3 w-3 -rotate-90 transition-transform duration-300 group-hover:-translate-y-1" />
           </button>
         </div>

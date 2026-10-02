@@ -3,7 +3,7 @@ import { gsap, INTRO_DELAY, lockScroll } from '../lib/motion'
 import { prefersReducedMotion } from '../lib/useCanvas'
 import { DotWord, KlarMark } from './Logo'
 
-/** Intro: the K assembles from its dots while a counter runs, then the curtain lifts. */
+/** Intro: the dotted K assembles, then the wordmark, while a counter runs; then the curtain lifts. */
 export default function Loader() {
   const root = useRef(null)
   const count = useRef(null)
