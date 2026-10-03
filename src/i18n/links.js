@@ -5,7 +5,12 @@ export const links = {
   github: 'https://github.com/klardatalabs',
 }
 
+// registered company name and Swiss UID, shown above the street address
+const legal = ['KlarDataLabs GmbH', 'CHE-285.980.722']
+
 export const address = {
-  en: ['Giesserei', '8427 Freienstein-Teufen', 'Zürich, Switzerland'],
-  de: ['Giesserei', '8427 Freienstein-Teufen', 'Zürich, Schweiz'],
+  en: [...legal, 'Giesserei', '8427 Freienstein-Teufen', 'Zürich, Switzerland'],
+  de: [...legal, 'Giesserei', '8427 Freienstein-Teufen', 'Zürich, Schweiz'],
+  fr: [...legal, 'Giesserei', '8427 Freienstein-Teufen', 'Zurich, Suisse'],
+  it: [...legal, 'Giesserei', '8427 Freienstein-Teufen', 'Zurigo, Svizzera'],
 }

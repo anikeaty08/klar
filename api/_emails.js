@@ -10,7 +10,8 @@ const C = { ink: '#06141b', paper: '#fafaf8', card: '#ffffff', sand: '#efebe5', 
 const SERIF = "Georgia, 'Times New Roman', serif"
 const SANS = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
 const SITE = 'https://klardatalabs.com'
-const ADDRESS = 'Giesserei · 8427 Freienstein-Teufen · Zürich, Switzerland'
+const ADDRESS = 'KlarDataLabs GmbH · CHE-285.980.722 · Giesserei · 8427 Freienstein-Teufen · Zürich, Switzerland'
+const LANGUAGE = { en: 'English', de: 'German', fr: 'French', it: 'Italian' }
 
 export const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 const nl2br = (s) => esc(s).replace(/\r?\n/g, '<br>')
@@ -97,7 +98,7 @@ export function notificationEmail(f) {
     ['Website', f.website ? `<a href="${esc(/^https?:\/\//.test(f.website) ? f.website : `https://${f.website}`)}" style="color:${C.ink};">${esc(f.website)}</a>` : '', f.website],
     ['Timeline', esc(f.timeline), f.timeline],
     ['Heard about us', esc(f.source), f.source],
-    ['Language', f.lang === 'de' ? 'German' : 'English', f.lang === 'de' ? 'German' : 'English'],
+    ['Language', LANGUAGE[f.lang] || 'English', LANGUAGE[f.lang] || 'English'],
     [
       'Location',
       place && `${esc(place)}${mapHref ? ` &nbsp;<a href="${mapHref}" style="color:${C.taupe};font-size:13px;">View map</a>` : ''}<br><span style="font-size:12px;color:${C.taupe};">Approximate, based on IP address</span>`,
@@ -172,10 +173,30 @@ const COPY = {
     sign: 'Ihr KlarDataLabs-Team',
     footer: 'Sie erhalten diese E-Mail, weil Sie das Kontaktformular auf klardatalabs.com verwendet haben.',
   },
+  fr: {
+    subject: 'Merci d’avoir contacté KlarDataLabs',
+    caption: 'Message reçu',
+    title: (n) => `Merci, ${n}`,
+    lead: 'Votre message est bien arrivé auprès de notre équipe. Nous allons le lire attentivement et revenir vers vous pour trouver le bon point de départ.',
+    yours: 'Votre message',
+    next: 'Découvrir nos réalisations',
+    sign: 'L’équipe KlarDataLabs',
+    footer: 'Vous recevez cet e-mail parce que vous avez utilisé le formulaire de contact sur klardatalabs.com.',
+  },
+  it: {
+    subject: 'Grazie per aver contattato KlarDataLabs',
+    caption: 'Messaggio ricevuto',
+    title: (n) => `Grazie, ${n}`,
+    lead: 'Il vostro messaggio è arrivato al nostro team. Lo leggeremo con attenzione e vi ricontatteremo per individuare insieme il punto di partenza giusto.',
+    yours: 'Il vostro messaggio',
+    next: 'Scoprite il nostro lavoro',
+    sign: 'Il team di KlarDataLabs',
+    footer: 'Ricevete questa e-mail perché avete utilizzato il modulo di contatto su klardatalabs.com.',
+  },
 }
 
 export function confirmationEmail(f) {
-  const c = COPY[f.lang === 'de' ? 'de' : 'en']
+  const c = COPY[f.lang] || COPY.en
   const n = firstName(f.name)
   const body = `
     ${caption(c.caption)}
@@ -183,7 +204,7 @@ export function confirmationEmail(f) {
     <p style="margin:16px 0 0 0;font-family:${SANS};font-size:16px;line-height:26px;color:#3a4549;">${esc(c.lead)}</p>
     <div style="margin-top:28px;">${caption(c.yours)}</div>
     <div style="margin-top:10px;padding:16px 18px;background:${C.paper};border-radius:10px;font-family:${SANS};font-size:15px;line-height:24px;color:${C.ink};">${nl2br(f.message)}</div>
-    <div style="margin-top:32px;">${button(f.lang === 'de' ? `${SITE}/de#projects` : `${SITE}/#projects`, c.next)}</div>
+    <div style="margin-top:32px;">${button(COPY[f.lang] && f.lang !== 'en' ? `${SITE}/${f.lang}#projects` : `${SITE}/#projects`, c.next)}</div>
     <p style="margin:32px 0 0 0;font-family:${SERIF};font-size:18px;line-height:26px;color:${C.ink};">— ${esc(c.sign)}</p>`
 
   return {

@@ -3,7 +3,7 @@ import { useLang } from '../i18n'
 import { gsap, introDelay } from '../lib/motion'
 import { pathFor } from '../lib/router'
 import { prefersReducedMotion } from '../lib/useCanvas'
-import { FlipChars, FlipText, Reveal, RevealTitle, Scramble, ScrubWords, TypedWord } from './fx'
+import { FlipChars, FlipText, Reveal, Scramble, ScrubWords, TypedWord } from './fx'
 import HeroLogo3D from './visuals/HeroLogo3D'
 import { Button, Chevron } from './ui'
 
@@ -40,6 +40,7 @@ const HERO_PIN = '+=90%' // how long the hero holds while the logo breaks apart
 export function Hero() {
   const { t, lang } = useLang()
   const root = useRef(null)
+  const phrases = t.hero.words.some((w) => w.includes(' '))
 
   useLayoutEffect(() => {
     if (prefersReducedMotion()) return
@@ -64,9 +65,13 @@ export function Hero() {
             <span className="h-px w-8 bg-stone" />
             <Scramble text={t.hero.eyebrow} />
           </p>
-          <h1 aria-label={t.hero.title} className="pointer-events-auto font-serif text-[clamp(2.5rem,5.2vw,5rem)] leading-[1.02] tracking-[-0.015em]">
+          <h1
+            aria-label={t.hero.title}
+            className={`pointer-events-auto font-serif leading-[1.02] tracking-[-0.015em] ${phrases ? 'text-[clamp(2.25rem,4.4vw,4.25rem)]' : 'text-[clamp(2.5rem,5.2vw,5rem)]'}`}
+          >
             <FlipChars as="span" text={t.hero.lead} delay={introDelay() + 0.15} className="block" />
-            <TypedWord words={t.hero.words} delay={introDelay() + 1.1} className="block whitespace-nowrap text-taupe" />
+            {/* multi-word endings (DE/FR/IT) wrap; two lines are reserved so typing never shifts the page */}
+            <TypedWord words={t.hero.words} delay={introDelay() + 1.1} className={`block text-taupe ${phrases ? 'min-h-[2.04em]' : 'whitespace-nowrap'}`} />
           </h1>
           <p data-hero-in className="mt-8 max-w-md text-[17px] leading-relaxed text-ink/75 lg:text-lg">
             {t.hero.body}
@@ -196,7 +201,7 @@ export function Approach() {
             <Reveal as="p" className="caption">
               {t.approach.caption}
             </Reveal>
-            <RevealTitle text={t.approach.title} className="mt-6 font-serif text-[clamp(2.4rem,4vw,3.8rem)] font-normal leading-[1.05]" />
+            <FlipChars as="h2" text={t.approach.title} onScroll className="mt-6 font-serif text-[clamp(2.4rem,4vw,3.8rem)] font-normal leading-[1.05] tracking-[-0.015em]" />
             <Reveal as="p" delay={100} className="mt-6 max-w-sm leading-relaxed text-ink/80">
               {t.approach.body}
             </Reveal>

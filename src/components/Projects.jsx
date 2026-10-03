@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLang } from '../i18n'
 import { gsap } from '../lib/motion'
 import { prefersReducedMotion } from '../lib/useCanvas'
-import { FlipText, Reveal, RevealTitle } from './fx'
+import { FlipChars, FlipText, Reveal } from './fx'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -19,7 +19,7 @@ function Header({ count }) {
         <Reveal as="p" className="caption">
           {t.projects.caption}
         </Reveal>
-        <RevealTitle text={t.projects.title} className="mt-6 font-serif text-[clamp(2.6rem,5vw,4.6rem)] font-normal leading-[1.02]" />
+        <FlipChars as="h2" text={t.projects.title} onScroll className="mt-6 font-serif text-[clamp(2.6rem,5vw,4.6rem)] font-normal leading-[1.02] tracking-[-0.015em]" />
         <Reveal as="p" delay={100} className="mt-6 max-w-md leading-relaxed text-ink/75">
           {t.projects.body}
         </Reveal>

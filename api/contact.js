@@ -12,7 +12,7 @@
  *                   onboarding@resend.dev only delivers to the Resend account's own email.
  *   IPINFO_TOKEN    optional — ipinfo.io token for the visitor-location lookup
  *   CONTACT_AUTOREPLY optional — "true" also sends the visitor a branded confirmation
- *                   (EN/DE). Only turn on once the domain is verified.
+ *                   (EN/DE/FR/IT). Only turn on once the domain is verified.
  */
 
 import { confirmationEmail, notificationEmail } from './_emails.js'
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
   const f = Object.fromEntries(Object.entries(LIMITS).map(([k, max]) => [k, clean(body[k], max)]))
   const needs = Array.isArray(body.needs) ? body.needs.filter((n) => typeof n === 'string').slice(0, 8).map((n) => n.slice(0, 60)) : []
-  const lang = body.lang === 'de' ? 'de' : 'en'
+  const lang = ['de', 'fr', 'it'].includes(body.lang) ? body.lang : 'en'
 
   const missing = []
   if (!f.name) missing.push('name')

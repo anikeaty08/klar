@@ -3,15 +3,20 @@ import { goTo } from './motion'
 
 /*
  * Tiny client-side router for the two pages: home and /contact, each optionally
- * prefixed with /de. Vercel rewrites every path to index.html (see vercel.json).
+ * prefixed with a language (/de, /fr, /it; English has no prefix). The host must
+ * serve index.html for every path.
  */
 
-export const langFromPath = (path = window.location.pathname) => (/^\/de(\/|$)/.test(path) ? 'de' : null)
-const stripLang = (path) => path.replace(/^\/de(?=\/|$)/, '') || '/'
+const PREFIX = /^\/(de|fr|it)(?=\/|$)/
+export const langFromPath = (path = window.location.pathname) => path.match(PREFIX)?.[1] ?? null
+const stripLang = (path) => path.replace(PREFIX, '') || '/'
 export const pageFromPath = (path = window.location.pathname) => (stripLang(path).replace(/\/+$/, '') === '/contact' ? 'contact' : 'home')
 
-/** Path for a page in a language: pathFor('contact', 'de') → '/de/contact'. */
-export const pathFor = (page, lang) => `${lang === 'de' ? '/de' : ''}${page === 'contact' ? '/contact' : '/'}`.replace(/^\/de\/$/, '/de')
+/** Path for a page in a language: pathFor('contact', 'de') → '/de/contact', pathFor('home', 'fr') → '/fr'. */
+export const pathFor = (page, lang) => {
+  const prefix = lang && lang !== 'en' ? `/${lang}` : ''
+  return page === 'contact' ? `${prefix}/contact` : prefix || '/'
+}
 
 export function navigate(to, { replace = false } = {}) {
   history[replace ? 'replaceState' : 'pushState'](null, '', to)

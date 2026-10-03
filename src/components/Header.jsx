@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { LangToggle, useLang } from '../i18n'
+import { LangMenu, LangToggle, useLang } from '../i18n'
 import { links } from '../i18n/links'
 import { gsap, lockScroll } from '../lib/motion'
 import { followLink, localHref, pathFor } from '../lib/router'
@@ -92,7 +92,7 @@ export default function Header() {
             >
               <MenuDots open={open} />
             </button>
-            <LangToggle />
+            <LangMenu />
           </div>
         </div>
       </header>

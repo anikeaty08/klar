@@ -117,54 +117,22 @@ export function FlipChars({ text, as: Tag = 'h1', className = '', delay = 0, scr
     }
   }, [delay, scrub, onScroll])
 
-  const words = text.split(' ')
+  // words never break inside, except after a hyphen ("ServiceNow-" / "Services"), so long compounds still wrap
+  const words = text.split(' ').map((w) => w.split(/(?<=-)/))
   return (
     <Tag ref={ref} className={className} aria-label={text}>
-      {words.map((w, wi) => (
-        <span key={wi} aria-hidden="true" className="inline-block whitespace-nowrap [perspective:900px]">
-          {[...w].map((c, ci) => (
-            <span key={ci} data-char className="inline-block will-change-transform">
-              {c}
-            </span>
-          ))}
-          {wi < words.length - 1 && <span className="inline-block">&nbsp;</span>}
-        </span>
-      ))}
-    </Tag>
-  )
-}
-
-/** Section heading whose words rise out of a mask when scrolled into view. `\n` forces a line break. */
-export function RevealTitle({ text, as: Tag = 'h2', className = '' }) {
-  const ref = useRef(null)
-  useLayoutEffect(() => {
-    if (prefersReducedMotion()) return
-    const ctx = gsap.context(() => {
-      gsap.from(ref.current.querySelectorAll('[data-word]'), {
-        yPercent: 110,
-        rotate: 4,
-        duration: 1.1,
-        ease: 'expo.out',
-        stagger: 0.06,
-        scrollTrigger: { trigger: ref.current, start: 'top 85%' },
-      })
-    }, ref)
-    return () => ctx.revert()
-  }, [])
-  return (
-    <Tag ref={ref} className={className} aria-label={text.replace(/\n/g, ' ')}>
-      {text.split('\n').map((line, li) => (
-        <span key={li} aria-hidden="true" className="block">
-          {line.split(' ').map((w, wi) => (
-            <span key={wi} className="inline-block overflow-hidden pb-[0.12em] align-bottom -mb-[0.12em]">
-              <span data-word className="inline-block origin-bottom-left">
-                {w}
-                {' '}
+      {words.map((parts, wi) =>
+        parts.map((part, pi) => (
+          <span key={`${wi}-${pi}`} aria-hidden="true" className="inline-block whitespace-nowrap [perspective:900px]">
+            {[...part].map((c, ci) => (
+              <span key={ci} data-char className="inline-block will-change-transform">
+                {c}
               </span>
-            </span>
-          ))}
-        </span>
-      ))}
+            ))}
+            {pi === parts.length - 1 && wi < words.length - 1 && <span className="inline-block">&nbsp;</span>}
+          </span>
+        )),
+      )}
     </Tag>
   )
 }

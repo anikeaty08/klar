@@ -4,14 +4,11 @@ import Footer from './components/Footer'
 import Header from './components/Header'
 import Projects from './components/Projects'
 import { Approach, Hero, Statement } from './components/Sections'
-import Services, { ServicesScrollDeck } from './components/Services'
+import Services from './components/Services'
 import { ScrollProgress } from './components/ui'
 import { useLang } from './i18n'
 import { getLenis, goTo, initSmoothScroll, INTRO_DELAY, ScrollTrigger } from './lib/motion'
 import { followLink, usePage } from './lib/router'
-
-// compare Services treatments: /?services=deck shows the scroll deck instead of the curtain
-const ServicesSection = new URLSearchParams(window.location.search).get('services') === 'deck' ? ServicesScrollDeck : Services
 
 export default function App() {
   const page = usePage()
@@ -80,7 +77,7 @@ export default function App() {
           <>
             <Hero />
             <Statement />
-            <ServicesSection />
+            <Services />
             <Approach />
             <Projects />
           </>

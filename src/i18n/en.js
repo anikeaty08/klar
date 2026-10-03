@@ -1,4 +1,4 @@
-// English copy (default language). German lives in de.js and loads as its own bundle.
+// English copy (default language). German, French and Italian load as their own bundles.
 export default {
   lang: 'en',
   meta: {
@@ -44,7 +44,7 @@ export default {
 
   statement: {
     caption: 'Who we are',
-    text: 'Klar means clear — and that’s exactly what we bring to complex operations. We build AI-powered automation that solves real operational problems, combining 20 years of hands-on SAP expertise and ServiceNow know-how with full-stack engineering, n8n workflows, and agentic AI.',
+    text: 'Klar means clear — and that’s exactly what we bring to complex operations. We connect the systems you already run — SAP and ServiceNow, backed by 20 years of hands-on expertise — with full-stack engineering, n8n workflows and agentic AI, so automation reaches the work that matters.',
     pillars: [
       { title: 'Turn', body: 'Turning operational complexity into automation that works.' },
       { title: 'Empower', body: 'Empowering teams with automation that runs on its own, and AI that knows when to bring a human in.' },
@@ -84,10 +84,10 @@ export default {
       },
       {
         name: 'Full-Stack Engineering',
-        body: 'Full-stack products built with React and Python — from prototype to production, designed to scale.',
+        body: 'Full-stack products on any modern tech stack — whatever frameworks and languages fit the job — from prototype to production, designed to scale.',
         cards: [
-          { glyph: 'grid', title: 'Web Applications', body: 'Full-stack web applications built with React and Python — from prototype to production.' },
-          { glyph: 'link', title: 'API & Backend Development', body: 'Robust, scalable backends and APIs that connect your systems and power your products.' },
+          { glyph: 'grid', title: 'Web Applications', body: 'Full-stack web applications on the frontend and backend stack that fits your team — from prototype to production.' },
+          { glyph: 'link', title: 'API & Backend Development', body: 'Robust, scalable backends and APIs, in whatever language fits, that connect your systems and power your products.' },
           { glyph: 'spark', title: 'Cloud-Native Architecture', body: 'Modern, microservices-based applications designed to scale — built on Azure, AWS, and GCP.' },
         ],
       },
