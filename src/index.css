@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* screens with room for the pinned Services curtain (and motion allowed); phones get stacked panels */
+@custom-variant pin (@media (min-width: 1024px) and (min-height: 640px) and (prefers-reduced-motion: no-preference));
+
 /* One-colour palette (warm ink on paper), modelled on tribe.ai */
 @theme {
   --color-paper: #fafaf8;

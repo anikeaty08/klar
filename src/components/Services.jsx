@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import { useLang } from '../i18n'
 import { gsap } from '../lib/motion'
-import { prefersReducedMotion } from '../lib/useCanvas'
 import { FlipChars, FlipText } from './fx'
 
 function SubList({ stage, index, dark = false, compact = false }) {
@@ -16,7 +15,7 @@ function SubList({ stage, index, dark = false, compact = false }) {
             <h4 className={`font-serif leading-tight ${compact ? 'text-[1.1rem]' : 'text-[1.35rem] lg:text-[1.55rem]'}`}>
               <FlipText text={c.title} stagger={10} />
             </h4>
-            <p className={`mt-1 max-w-lg leading-relaxed ${compact ? 'line-clamp-2 text-[12.5px]' : 'text-[14.5px]'} ${dark ? 'text-paper/65' : 'text-taupe'}`}>{c.body}</p>
+            <p className={`mt-1 max-w-lg leading-relaxed ${compact ? 'text-[13px]' : 'text-[14.5px]'} ${dark ? 'text-paper/65' : 'text-taupe'}`}>{c.body}</p>
           </div>
         </li>
       ))}
@@ -26,7 +25,11 @@ function SubList({ stage, index, dark = false, compact = false }) {
 
 /*
  * Services: Full-bleed panels, one per practice, wipe up over each other; the panel
- * underneath eases back as the next one arrives. */
+ * underneath eases back as the next one arrives. Only where a panel's full text fits one
+ * screen (the `pin` variant: wide + tall + motion allowed); phones and reduced motion get
+ * the panels stacked at their natural height instead. */
+
+const PIN_MQ = '(min-width: 1024px) and (min-height: 640px) and (prefers-reduced-motion: no-preference)'
 
 const CURTAIN_TONES = [
   { box: 'bg-ink text-paper', dark: true },
@@ -41,8 +44,8 @@ export default function Services() {
   const root = useRef(null)
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) return
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia(root)
+    mm.add(PIN_MQ, () => {
       const panels = gsap.utils.toArray('[data-curtain]')
       gsap.set(panels.slice(1), { clipPath: 'inset(100% 0% 0% 0%)' })
       const tl = gsap.timeline({
@@ -54,17 +57,17 @@ export default function Services() {
           .from(p.querySelector('[data-curtain-inner]'), { yPercent: 18, duration: 1 }, i)
           .to(panels[i].querySelector('[data-curtain-inner]'), { scale: 0.92, opacity: 0.35, duration: 1 }, i)
       })
-    }, root)
-    return () => ctx.revert()
+    })
+    return () => mm.revert()
   }, [stages.length])
 
   return (
-    <section id="services" ref={root} className="relative h-[100svh] overflow-hidden">
+    <section id="services" ref={root} className="relative pin:h-[100svh] pin:overflow-hidden">
       {stages.map((s, i) => {
         const tone = CURTAIN_TONES[i % 4]
         return (
-          <div key={s.name} data-curtain className={`absolute inset-0 ${tone.box}`}>
-            <div data-curtain-inner className="container-x grid h-full content-center gap-8 lg:grid-cols-12 lg:gap-10">
+          <div key={s.name} data-curtain className={`relative py-20 sm:py-24 pin:absolute pin:inset-0 pin:py-0 ${tone.box}`}>
+            <div data-curtain-inner className="container-x grid gap-8 pin:h-full pin:content-center lg:grid-cols-12 lg:gap-10">
               <div className="lg:col-span-6">
                 <p className={`caption ${tone.dark ? 'text-paper/55' : 'text-taupe'}`}>
                   {t.services.caption} · 0{i + 1}/0{stages.length}
