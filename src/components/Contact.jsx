@@ -49,12 +49,46 @@ export default function Contact() {
   const formRef = useRef(null)
   const captchaRef = useRef(null)
   const [captcha, setCaptcha] = useState('') // Turnstile token; '' until the check passes
+  const [verify, setVerify] = useState('idle') // idle | checking | ok — the server's instant check of the token
+  const captchaIdem = useRef('') // same key for the instant check and the send, so the token can be checked twice
+  const latestToken = useRef('')
+  const refusals = useRef(0) // consecutive instant-check refusals; stops an endless re-arm loop
 
   const set = (name, value) => {
     setValues((v) => ({ ...v, [name]: value }))
     if (errors[name]) setErrors((er) => ({ ...er, [name]: undefined }))
   }
   const toggleNeed = (opt) => set('needs', values.needs.includes(opt) ? values.needs.filter((n) => n !== opt) : [...values.needs, opt])
+
+  // the moment the box is ticked, the server verifies the token (nothing is sent yet)
+  const onCaptcha = async (token) => {
+    latestToken.current = token
+    setCaptcha(token)
+    const id = token && globalThis.crypto?.randomUUID?.()
+    captchaIdem.current = id || ''
+    if (!id) return setVerify('idle') // no token yet (or no way to make a key): Send verifies instead
+    setVerify('checking')
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ check: true, turnstileToken: token, turnstileIdem: id }),
+      })
+      if (latestToken.current !== token) return // a newer token took over meanwhile
+      if (res.ok) {
+        refusals.current = 0
+        setVerify('ok')
+        setErrors((er) => (er.captcha ? { ...er, captcha: undefined } : er))
+      } else {
+        setVerify('idle')
+        setErrors((er) => ({ ...er, captcha: c.errors.captchaRetry }))
+        // ask Turnstile for one fresh token (checked again); if that's refused too, wait for Send
+        if (++refusals.current < 2) captchaRef.current?.reset()
+      }
+    } catch {
+      if (latestToken.current === token) setVerify('idle') // offline for a moment: Send verifies instead
+    }
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -72,11 +106,12 @@ export default function Contact() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, lang, startedAt: startedAt.current, turnstileToken: captcha }),
+        body: JSON.stringify({ ...values, lang, startedAt: startedAt.current, turnstileToken: captcha, turnstileIdem: captchaIdem.current }),
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.ok) return setStatus('sent')
       // tokens are single-use: get a fresh one for the next try
+      refusals.current = 0
       captchaRef.current?.reset()
       if (data.error === 'captcha') {
         setErrors((er) => ({ ...er, captcha: c.errors.captchaRetry }))
@@ -93,6 +128,7 @@ export default function Contact() {
     setErrors({})
     setStatus('idle')
     setCaptcha('')
+    setVerify('idle')
     startedAt.current = Date.now()
   }
 
@@ -249,17 +285,24 @@ export default function Contact() {
                     <Turnstile
                       ref={captchaRef}
                       lang={lang}
-                      onToken={(token) => {
-                        setCaptcha(token)
-                        // a fresh token answers "please complete the check"; the retry note stays until the next send
-                        if (token) setErrors((er) => (er.captcha === c.errors.captcha ? { ...er, captcha: undefined } : er))
-                      }}
+                      onToken={onCaptcha}
                       className="max-w-[400px]"
                     />
-                    {errors.captcha && (
+                    {errors.captcha ? (
                       <p role="alert" className="mt-2 text-[13px] text-klar">
                         {errors.captcha}
                       </p>
+                    ) : (
+                      verify !== 'idle' && (
+                        <p role="status" className="mt-2 flex items-center gap-2 text-[13px] text-taupe">
+                          {verify === 'ok' && (
+                            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 text-ink" aria-hidden="true">
+                              <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                          {verify === 'ok' ? c.verify.ok : c.verify.checking}
+                        </p>
+                      )
                     )}
                   </div>
                 )}

@@ -160,6 +160,7 @@ export default {
       captcha: 'Veuillez compléter la vérification de sécurité.',
       captchaRetry: 'La vérification de sécurité n’a pas abouti. Veuillez renvoyer votre message.',
     },
+    verify: { checking: 'Vérification…', ok: 'Vérifié — vous pouvez envoyer votre message.' },
     submit: 'Envoyer le message',
     sending: 'Envoi en cours…',
     success: { title: 'Merci — votre message nous est bien parvenu.', body: 'Nous vous répondrons très bientôt à l’adresse e-mail indiquée.', again: 'Envoyer un autre message' },

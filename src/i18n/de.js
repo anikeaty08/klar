@@ -160,6 +160,7 @@ export default {
       captcha: 'Bitte schliessen Sie die Sicherheitsprüfung ab.',
       captchaRetry: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte senden Sie Ihre Nachricht erneut.',
     },
+    verify: { checking: 'Wird geprüft…', ok: 'Bestätigt — Sie können Ihre Nachricht senden.' },
     submit: 'Nachricht senden',
     sending: 'Wird gesendet…',
     success: { title: 'Vielen Dank — Ihre Nachricht ist eingegangen.', body: 'Wir melden uns in Kürze unter der von Ihnen angegebenen E-Mail-Adresse.', again: 'Weitere Nachricht senden' },

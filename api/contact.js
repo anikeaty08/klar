@@ -47,6 +47,12 @@ export default async function handler(req, res) {
   }
   body = body || {}
 
+  // instant check when the visitor ticks the box: verify the token now, send nothing
+  if (body.check === true) {
+    const ok = await humanCheck(body.turnstileToken, clientIp(req), body.turnstileIdem)
+    return res.status(ok ? 200 : 403).json(ok ? { ok: true } : { ok: false, error: 'captcha' })
+  }
+
   // spam: the hidden field must stay empty, and real people take more than a few seconds
   const tooFast = Number(body.startedAt) && Date.now() - Number(body.startedAt) < 3000
   if (body.hp || tooFast) return res.status(200).json({ ok: true })
@@ -64,7 +70,7 @@ export default async function handler(req, res) {
   if (missing.length) return res.status(400).json({ ok: false, error: 'invalid', fields: missing })
 
   // bots: Cloudflare Turnstile must vouch for this submission
-  if (!(await humanCheck(body.turnstileToken, clientIp(req)))) return res.status(403).json({ ok: false, error: 'captcha' })
+  if (!(await humanCheck(body.turnstileToken, clientIp(req), body.turnstileIdem))) return res.status(403).json({ ok: false, error: 'captcha' })
 
   const key = process.env.RESEND_API_KEY
   if (!key) {
@@ -104,7 +110,11 @@ export default async function handler(req, res) {
  * Ask Cloudflare whether the form's Turnstile token is genuine, unused and recent, and
  * that it was solved for this form ("contact") on one of our own sites.
  * Fails closed: if Cloudflare can't be reached, the submission is refused.
+ * The form checks each token twice (when the box is ticked, then on send) with the same
+ * idempotency key, so Cloudflare answers the repeat instead of calling it a replay.
  */
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const TURNSTILE_ACTION = 'contact'
 const LOCAL_HOSTS = ['localhost', '127.0.0.1']
@@ -117,7 +127,7 @@ function allowedHosts() {
   return new Set(process.env.NODE_ENV === 'production' ? list.filter((h) => !LOCAL_HOSTS.includes(h)) : list)
 }
 
-async function humanCheck(token, ip) {
+async function humanCheck(token, ip, idem) {
   const secret = process.env.TURNSTILE_SECRET_KEY
   if (!secret) {
     console.warn('contact: TURNSTILE_SECRET_KEY is not set, skipping the bot check')
@@ -127,6 +137,7 @@ async function humanCheck(token, ip) {
   try {
     const form = new URLSearchParams({ secret, response: token })
     if (!isPrivate(ip)) form.set('remoteip', ip)
+    if (typeof idem === 'string' && UUID_RE.test(idem)) form.set('idempotency_key', idem)
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form, signal: AbortSignal.timeout(10000) })
     const out = await r.json()
     if (out.success !== true) {

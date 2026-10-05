@@ -160,6 +160,7 @@ export default {
       captcha: 'Please complete the security check.',
       captchaRetry: 'The security check didn’t go through. Please send your message again.',
     },
+    verify: { checking: 'Checking…', ok: 'Verified — you can send your message.' },
     submit: 'Send message',
     sending: 'Sending…',
     success: { title: 'Thank you — your message is in.', body: 'We’ll be in touch soon at the email you gave us.', again: 'Send another message' },
