@@ -11,6 +11,13 @@
  *                   Until the domain is verified, Resend's test sender
  *                   onboarding@resend.dev only delivers to the Resend account's own email.
  *   IPINFO_TOKEN    optional — ipinfo.io token for the visitor-location lookup
+ *   TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret; every submission must carry a
+ *                   token Cloudflare confirms. Pairs with VITE_TURNSTILE_SITE_KEY in the
+ *                   frontend build. If unset, the bot check is skipped (local dev only).
+ *   TURNSTILE_HOSTNAMES optional — comma-separated sites the widget may be solved on;
+ *                   defaults to klardatalabs.com, www.klardatalabs.com and the Vercel test
+ *                   site klar-livid-delta.vercel.app, plus localhost for development (localhost
+ *                   is dropped whenever NODE_ENV is production, e.g. on Vercel).
  *   CONTACT_AUTOREPLY optional — "true" also sends the visitor a branded confirmation
  *                   (EN/DE/FR/IT). Only turn on once the domain is verified.
  */
@@ -56,6 +63,9 @@ export default async function handler(req, res) {
   if (body.consent !== true) missing.push('consent')
   if (missing.length) return res.status(400).json({ ok: false, error: 'invalid', fields: missing })
 
+  // bots: Cloudflare Turnstile must vouch for this submission
+  if (!(await humanCheck(body.turnstileToken, clientIp(req)))) return res.status(403).json({ ok: false, error: 'captcha' })
+
   const key = process.env.RESEND_API_KEY
   if (!key) {
     console.error('contact: RESEND_API_KEY is not set')
@@ -87,6 +97,53 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('contact: request to Resend failed', err)
     return res.status(502).json({ ok: false, error: 'send_failed' })
+  }
+}
+
+/* ------------------------------------------------------------ bot check
+ * Ask Cloudflare whether the form's Turnstile token is genuine, unused and recent, and
+ * that it was solved for this form ("contact") on one of our own sites.
+ * Fails closed: if Cloudflare can't be reached, the submission is refused.
+ */
+
+const TURNSTILE_ACTION = 'contact'
+const LOCAL_HOSTS = ['localhost', '127.0.0.1']
+
+function allowedHosts() {
+  const list = (process.env.TURNSTILE_HOSTNAMES || 'klardatalabs.com,www.klardatalabs.com,klar-livid-delta.vercel.app,localhost,127.0.0.1')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+  return new Set(process.env.NODE_ENV === 'production' ? list.filter((h) => !LOCAL_HOSTS.includes(h)) : list)
+}
+
+async function humanCheck(token, ip) {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+  if (!secret) {
+    console.warn('contact: TURNSTILE_SECRET_KEY is not set, skipping the bot check')
+    return true
+  }
+  if (typeof token !== 'string' || token.length < 1 || token.length > 2048) return false
+  try {
+    const form = new URLSearchParams({ secret, response: token })
+    if (!isPrivate(ip)) form.set('remoteip', ip)
+    const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form, signal: AbortSignal.timeout(10000) })
+    const out = await r.json()
+    if (out.success !== true) {
+      console.warn('contact: Turnstile rejected the token', out['error-codes'])
+      return false
+    }
+    // Cloudflare's test keys carry no action and report example.com; real keys must match exactly
+    if (out.metadata?.result_with_testing_key) return true
+    const hosts = allowedHosts()
+    if (out.action !== TURNSTILE_ACTION || !hosts.has(String(out.hostname || '').toLowerCase())) {
+      console.warn('contact: Turnstile token for the wrong form or site', { action: out.action, hostname: out.hostname })
+      return false
+    }
+    return true
+  } catch (err) {
+    console.error('contact: Turnstile check failed', err?.message)
+    return false
   }
 }
 

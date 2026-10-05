@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useLang } from '../i18n'
 import { address, links } from '../i18n/links'
 import { FlipChars, FlipText, Reveal } from './fx'
+import Turnstile, { TURNSTILE_SITE_KEY } from './Turnstile'
 import { Chevron } from './ui'
 
 const EMPTY = { name: '', email: '', company: '', role: '', website: '', needs: [], message: '', timeline: '', source: '', consent: false, hp: '' }
@@ -46,6 +47,8 @@ export default function Contact() {
   const [status, setStatus] = useState('idle') // idle | sending | sent | failed
   const startedAt = useRef(Date.now())
   const formRef = useRef(null)
+  const captchaRef = useRef(null)
+  const [captcha, setCaptcha] = useState('') // Turnstile token; '' until the check passes
 
   const set = (name, value) => {
     setValues((v) => ({ ...v, [name]: value }))
@@ -56,10 +59,12 @@ export default function Contact() {
   const onSubmit = async (e) => {
     e.preventDefault()
     const errs = validate(values, c.errors)
+    if (TURNSTILE_SITE_KEY && !captcha) errs.captcha = c.errors.captcha
     setErrors(errs)
     const first = Object.keys(errs)[0]
     if (first) {
-      formRef.current.querySelector(`[name="${first}"]`)?.focus()
+      if (first === 'captcha') formRef.current.querySelector('#contact-captcha')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      else formRef.current.querySelector(`[name="${first}"]`)?.focus()
       return
     }
     setStatus('sending')
@@ -67,11 +72,18 @@ export default function Contact() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, lang, startedAt: startedAt.current }),
+        body: JSON.stringify({ ...values, lang, startedAt: startedAt.current, turnstileToken: captcha }),
       })
       const data = await res.json().catch(() => ({}))
-      setStatus(res.ok && data.ok ? 'sent' : 'failed')
+      if (res.ok && data.ok) return setStatus('sent')
+      // tokens are single-use: get a fresh one for the next try
+      captchaRef.current?.reset()
+      if (data.error === 'captcha') {
+        setErrors((er) => ({ ...er, captcha: c.errors.captchaRetry }))
+        setStatus('idle')
+      } else setStatus('failed')
     } catch {
+      captchaRef.current?.reset()
       setStatus('failed')
     }
   }
@@ -80,6 +92,7 @@ export default function Contact() {
     setValues(EMPTY)
     setErrors({})
     setStatus('idle')
+    setCaptcha('')
     startedAt.current = Date.now()
   }
 
@@ -230,6 +243,26 @@ export default function Contact() {
                     </p>
                   )}
                 </div>
+
+                {TURNSTILE_SITE_KEY && (
+                  <div id="contact-captcha" className="sm:col-span-2">
+                    <Turnstile
+                      ref={captchaRef}
+                      lang={lang}
+                      onToken={(token) => {
+                        setCaptcha(token)
+                        // a fresh token answers "please complete the check"; the retry note stays until the next send
+                        if (token) setErrors((er) => (er.captcha === c.errors.captcha ? { ...er, captcha: undefined } : er))
+                      }}
+                      className="max-w-[400px]"
+                    />
+                    {errors.captcha && (
+                      <p role="alert" className="mt-2 text-[13px] text-klar">
+                        {errors.captcha}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-5 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
                   {status === 'failed' ? (
