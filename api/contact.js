@@ -1,9 +1,9 @@
 /*
- * Vercel serverless function: POST /api/contact
+ * Node handler for POST /api/contact. server.js runs it in production; Vite uses it in development.
  * Validates the contact form and emails it to hello@klardatalabs.com through Resend
  * (https://resend.com), with Reply-To set to the sender so you can answer directly.
  *
- * Environment variables (Vercel → Project → Settings → Environment Variables):
+ * Environment variables (Hostinger hPanel → Web App → Environment variables):
  *   RESEND_API_KEY  required — Resend API key
  *   CONTACT_TO      optional — recipient, defaults to hello@klardatalabs.com
  *   CONTACT_FROM    optional — sender; must be on a domain verified in Resend,
@@ -15,16 +15,23 @@
  *                   token Cloudflare confirms. Pairs with VITE_TURNSTILE_SITE_KEY in the
  *                   frontend build. If unset, the bot check is skipped (local dev only).
  *   TURNSTILE_HOSTNAMES optional — comma-separated sites the widget may be solved on;
- *                   defaults to klardatalabs.com, www.klardatalabs.com and the Vercel test
- *                   site klar-livid-delta.vercel.app, plus localhost for development (localhost
- *                   is dropped whenever NODE_ENV is production, e.g. on Vercel).
+ *                   defaults to klardatalabs.com, www.klardatalabs.com and localhost for development.
+ *                   Localhost is dropped whenever NODE_ENV is production.
  *   CONTACT_AUTOREPLY optional — "true" also sends the visitor a branded confirmation
  *                   (EN/DE/FR/IT). Only turn on once the domain is verified.
  */
 
 import { confirmationEmail, notificationEmail } from './_emails.js'
 
-const TO = process.env.CONTACT_TO || 'hello@klardatalabs.com'
+const recipients = (value) =>
+  String(value || '')
+    .split(',')
+    .map((email) => email.trim())
+    .filter(Boolean)
+
+const TO = recipients(process.env.CONTACT_TO)
+const RECIPIENTS = TO.length ? TO : ['hello@klardatalabs.com']
+const REPLY_TO = process.env.CONTACT_REPLY_TO || RECIPIENTS[0]
 const FROM = process.env.CONTACT_FROM || 'KlarDataLabs Website <onboarding@resend.dev>'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const LIMITS = { name: 120, email: 200, company: 160, role: 120, website: 300, message: 5000, timeline: 80, source: 200 }
@@ -88,7 +95,7 @@ export default async function handler(req, res) {
 
   try {
     const note = notificationEmail(data)
-    const r = await send({ to: [TO], reply_to: f.email, subject: note.subject, html: note.html, text: note.text })
+    const r = await send({ to: RECIPIENTS, reply_to: f.email, subject: note.subject, html: note.html, text: note.text })
     if (!r.ok) {
       console.error('contact: Resend responded', r.status, await r.text())
       return res.status(502).json({ ok: false, error: 'send_failed' })
@@ -96,7 +103,7 @@ export default async function handler(req, res) {
     // the visitor's confirmation is a courtesy: if it fails, the enquiry still counts as sent
     if (process.env.CONTACT_AUTOREPLY === 'true') {
       const conf = confirmationEmail(data)
-      const c = await send({ to: [f.email], reply_to: TO, subject: conf.subject, html: conf.html, text: conf.text })
+      const c = await send({ to: [f.email], reply_to: REPLY_TO, subject: conf.subject, html: conf.html, text: conf.text })
       if (!c.ok) console.error('contact: confirmation failed', c.status, await c.text())
     }
     return res.status(200).json({ ok: true })
@@ -120,7 +127,7 @@ const TURNSTILE_ACTION = 'contact'
 const LOCAL_HOSTS = ['localhost', '127.0.0.1']
 
 function allowedHosts() {
-  const list = (process.env.TURNSTILE_HOSTNAMES || 'klardatalabs.com,www.klardatalabs.com,klar-livid-delta.vercel.app,localhost,127.0.0.1')
+  const list = (process.env.TURNSTILE_HOSTNAMES || 'klardatalabs.com,www.klardatalabs.com,localhost,127.0.0.1')
     .split(',')
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean)

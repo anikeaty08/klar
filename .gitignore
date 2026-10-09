@@ -4,3 +4,4 @@ demo.html
 review.pdf
 .env
 .env.*
+!.env.example

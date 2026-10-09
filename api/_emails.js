@@ -1,6 +1,5 @@
 /*
- * Email templates for the contact form. Vercel doesn't expose files that start
- * with "_" in /api as endpoints, so this is a plain shared module.
+ * Email templates for the contact form. This is a plain shared module, not an endpoint.
  *
  * Email-client-safe: table layout, inline styles, system fonts, no images, and a
  * hidden preheader line for the inbox preview.

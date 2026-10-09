@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // Dev only: serve POST /api/contact from api/contact.js (with the keys in .env.local),
-// so the contact form works end to end on localhost. Production uses the host's functions.
+// so the contact form works end to end on localhost. Production uses server.js.
 function devApi() {
   return {
     name: 'dev-api',
